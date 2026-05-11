@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+  <meta name="theme-color" content="#faf8f3" />
+  <title>ReadLab · 心理學英文閱讀</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #faf8f3;
+      -webkit-text-size-adjust: 100%;
+      overscroll-behavior-y: contain;
+    }
+    button { font-family: inherit; }
+    /* Prevent iOS auto-zoom on inputs (safety, not used here but precautionary) */
+    input, select, textarea { font-size: 16px; }
+  </style>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel" data-presets="react">
+
+// localStorage shim mimicking window.storage API used by the original component
+const storage = {
+  get: async (key) => {
+    const v = localStorage.getItem(key);
+    return v === null ? null : { key, value: v };
+  },
+  set: async (key, value) => {
+    localStorage.setItem(key, value);
+    return { key, value };
+  },
+  delete: async (key) => {
+    localStorage.removeItem(key);
+    return { key, deleted: true };
+  },
+};
+
+const { useState, useMemo, useEffect } = React;
+
+// ─── ARTICLE BANK (12 articles) ────────────────────────────────────────────
+
+const ARTICLES = [
+  {
+    id: "A001",
+    topic: "認知偏誤",
+    title: "Why Your Brain Trusts Familiar Lies",
+    source: "Psychology Today",
+    passage: `When a statement is repeated often enough, our brains begin to treat it as more credible — even when we know it is false. This phenomenon, called the illusory truth effect, was first documented by psychologist Lynn Hasher and her colleagues in 1977. In their study, participants were presented with the same trivia statements multiple times across several weeks. Statements that appeared more than once were rated as more likely to be true, regardless of their actual accuracy.
+
+The effect persists for a striking reason: repetition feels like fluency, and fluency feels like truth. Our cognitive system uses ease of processing as a quick proxy for reliability. When information flows smoothly through our minds, we mistake that smoothness for credibility. Importantly, this happens even when participants are explicitly told beforehand that some statements are false.
+
+Recent studies have extended these findings to political misinformation, advertising, and social media. A 2015 study at Vanderbilt University found that even implausible claims, such as "the Atlantic Ocean is the largest ocean on Earth," became more believable after just one prior exposure. The effect is robust across age groups and education levels, suggesting it operates below conscious awareness.
+
+What makes the illusory truth effect particularly troubling is its resistance to correction. Even after a falsehood is officially debunked, mere familiarity with the original claim can leave a lingering sense that it might still be true. This poses a serious challenge for fact-checkers and educators alike, who must compete not just with new lies but with the residual feeling of truth that repetition creates.
+
+Understanding this bias is the first step, but knowing about it does not make us immune. Researchers are now exploring whether specific cognitive strategies — such as actively questioning fluent claims or pausing before accepting information — can reduce vulnerability to repeated misinformation.`,
+    questions: [
+      { type: "主旨題", question: "What is this passage mainly about?", options: ["(A) The history of psychological research at Vanderbilt University", "(B) How repetition makes false information feel more believable", "(C) The differences between fact-checking and education", "(D) Why social media spreads misinformation faster than other media"], answer: "B", explanation: "全文核心是「重複會讓錯誤資訊感覺更可信」（illusory truth effect），這個概念貫穿全篇。(A) Vanderbilt 只是研究來源，是細節；(C) 文章只在最後一段順帶提到 fact-checkers；(D) 文章沒有比較社群媒體與其他媒體的傳播速度。" },
+      { type: "詞彙題", question: "The word \"proxy\" in paragraph 2 is closest in meaning to:", options: ["(A) substitute", "(B) opposite", "(C) warning", "(D) translation"], answer: "A", explanation: "原文「uses ease of processing as a quick proxy for reliability」意思是「把處理流暢度當作可信度的替代指標」。proxy 在此 = 替代物 / 代理（substitute）。" },
+      { type: "細節題", question: "According to the passage, what did Hasher's 1977 study show?", options: ["(A) Participants could easily detect repeated false statements", "(B) Repeated trivia statements were rated as more likely to be true", "(C) Education level strongly affected susceptibility to the effect", "(D) The effect only worked when participants believed the source"], answer: "B", explanation: "第一段直接說：「Statements that appeared more than once were rated as more likely to be true」。(A) 與原文相反；(C) 第三段反而說 effect 不受教育程度影響；(D) 文章未提到。" },
+      { type: "推論題", question: "It can be inferred from the passage that:", options: ["(A) Knowledge of the illusory truth effect provides full protection against it", "(B) Fact-checking alone may be insufficient to fully correct misinformation", "(C) Only people with low education levels fall for repeated falsehoods", "(D) The Vanderbilt study disproved Hasher's original findings"], answer: "B", explanation: "第四段提到即使謠言被 debunk，熟悉感仍會留下「可能是真的」的殘餘感受，所以 fact-checking 面臨挑戰——可推論單靠 fact-checking 不夠。**支撐句：第四段「mere familiarity... can leave a lingering sense that it might still be true」。**(A) 文章最後一段明說「knowing about it does not make us immune」。" },
+      { type: "預測題", question: "The paragraph following this passage most likely discusses:", options: ["(A) The biography of Lynn Hasher", "(B) The history of advertising in the 20th century", "(C) Specific techniques for resisting the illusory truth effect", "(D) Other types of memory biases unrelated to repetition"], answer: "C", explanation: "最後一句明確預告：「Researchers are now exploring whether specific cognitive strategies... can reduce vulnerability to repeated misinformation.」——下一段必然延伸這些「具體認知策略」。" },
+    ],
+  },
+  {
+    id: "A002",
+    topic: "睡眠與記憶",
+    title: "What the Sleeping Brain Is Doing With Your Memories",
+    source: "Scientific American",
+    passage: `For decades, sleep was thought to be a passive state — a kind of biological idle mode. Modern neuroscience has dramatically revised this view. We now know that during sleep, particularly during slow-wave sleep and REM stages, the brain is intensely active in consolidating memories formed during waking hours.
+
+The process works roughly as follows. As we encounter new experiences during the day, the hippocampus — a small, seahorse-shaped structure deep in the brain — temporarily records these events. But the hippocampus has limited capacity, and storing memories there is metabolically expensive. During sleep, the brain replays these recent experiences and gradually transfers them to the neocortex, where they can be stored more permanently and integrated with existing knowledge.
+
+Researchers can actually observe this replay. In a now-classic series of experiments, neuroscientist Matthew Wilson recorded the brain activity of rats as they ran through mazes, then continued recording as the rats slept. He found that the same neural patterns that had fired during the maze runs reappeared during sleep, often at faster speeds — as if the brain were rehearsing the day's events in fast-forward.
+
+This consolidation is not merely about preservation. Sleep also seems to extract patterns and meaning from individual experiences. Studies have shown that participants who sleep after learning a new skill perform better not only at the specific task they practiced, but also at related tasks they never explicitly trained on. The brain, it appears, abstracts general rules from specific examples while we are unconscious.
+
+Failing to get adequate sleep — particularly slow-wave sleep — interferes with this entire system. Memories that were never consolidated may simply be lost, while patterns that could have been extracted go unrecognized. The implications for students cramming the night before an exam are sobering, and they suggest that one of the most important study strategies happens with the lights off.`,
+    questions: [
+      { type: "主旨題", question: "What is the main idea of this passage?", options: ["(A) Sleep is a passive biological state with little importance", "(B) The hippocampus is the most important memory structure", "(C) Sleep actively consolidates memories and extracts patterns from experience", "(D) Students should never study late at night"], answer: "C", explanation: "全文圍繞「睡眠如何主動鞏固記憶並抽取規律」。(A) 是文章一開始就反駁的舊觀點；(B) hippocampus 只是過程中的一個角色；(D) 是引申。" },
+      { type: "詞彙題", question: "The word \"consolidating\" in paragraph 1 most nearly means:", options: ["(A) erasing", "(B) strengthening and integrating", "(C) compressing into smaller files", "(D) randomly rearranging"], answer: "B", explanation: "memory consolidation 是專有概念：把記憶鞏固、整合、強化。後文也說 transfer to neocortex 並 integrated with existing knowledge——印證 B。" },
+      { type: "細節題", question: "What did Matthew Wilson's experiments find?", options: ["(A) Rats performed better on mazes after sleeping", "(B) The same neural patterns from maze runs reappeared during sleep", "(C) The hippocampus shrinks during slow-wave sleep", "(D) Rats forgot the maze entirely if they did not sleep"], answer: "B", explanation: "第三段直接說：「the same neural patterns that had fired during the maze runs reappeared during sleep」。" },
+      { type: "推論題", question: "It can be inferred from the passage that:", options: ["(A) Cramming the night before an exam is generally less effective than studying with adequate sleep", "(B) The neocortex is less important for memory than the hippocampus", "(C) Slow-wave sleep is unnecessary for short-term memory", "(D) Wilson's research has been largely disproven"], answer: "A", explanation: "最後一段說「failing to get adequate sleep... memories that were never consolidated may simply be lost」並稱對熬夜抱佛腳的學生「the implications... are sobering」。**支撐句：最後一段「Memories that were never consolidated may simply be lost」。**" },
+      { type: "預測題", question: "The paragraph following this passage most likely discusses:", options: ["(A) The history of sleep research before the 20th century", "(B) Anatomy of the hippocampus in detail", "(C) Practical sleep recommendations for students or learners", "(D) How REM sleep differs from non-REM sleep biologically"], answer: "C", explanation: "最後一句提到「one of the most important study strategies happens with the lights off」——已轉向「對學習者的建議」，下一段最可能是實用建議。" },
+    ],
+  },
+  {
+    id: "A003",
+    topic: "壓力與大腦",
+    title: "How Chronic Stress Reshapes the Brain",
+    source: "APA Monitor",
+    passage: `Acute stress — the kind that surges through us before a job interview or while narrowly avoiding a car accident — is generally adaptive. The body floods with cortisol and adrenaline, sharpening attention and mobilizing resources. Once the threat passes, these chemicals subside and the body returns to baseline. Chronic stress is a different matter entirely.
+
+When stress hormones remain elevated for weeks, months, or years, they begin to alter the very structure of the brain. The most well-documented changes occur in three regions: the prefrontal cortex, the hippocampus, and the amygdala. The prefrontal cortex, responsible for executive function and emotional regulation, tends to shrink. The hippocampus, central to memory, also shows reduced volume. The amygdala — the brain's threat-detection center — actually grows larger and more reactive.
+
+These changes are not merely academic. A person whose amygdala has become hyperactive while their prefrontal cortex has weakened will experience the world as more threatening and have fewer cognitive resources to manage that perception. Small inconveniences feel like crises. Setbacks feel catastrophic. The brain has, in a sense, been retrained to expect danger.
+
+Importantly, these changes are not permanent. Research on neuroplasticity shows that the brain retains the capacity for structural change throughout life. Interventions that reliably reduce stress — including regular exercise, mindfulness meditation, adequate sleep, and certain forms of psychotherapy — have been shown to partially reverse stress-induced brain changes. In some studies, hippocampal volume has measurably increased after just eight weeks of mindfulness training.
+
+The implication is significant: chronic stress is not just an unpleasant emotional state but a biological process with measurable physical consequences. Recognizing it as such may change how individuals, employers, and healthcare systems approach prevention and treatment. The next question becomes practical: what specific strategies are most effective at protecting and restoring the stressed brain?`,
+    questions: [
+      { type: "主旨題", question: "What is this passage mainly about?", options: ["(A) The structural and functional brain changes caused by chronic stress, and their reversibility", "(B) Why job interviews trigger stress responses", "(C) The discovery of cortisol and adrenaline", "(D) Mindfulness meditation as the only effective stress treatment"], answer: "A", explanation: "全文核心是「慢性壓力如何改變大腦結構，以及這些變化是可逆的」。(B) 是引言例子；(D) 過於極端，文中列了多種方法。" },
+      { type: "詞彙題", question: "The word \"subside\" in paragraph 1 most nearly means:", options: ["(A) increase rapidly", "(B) become dangerous", "(C) decrease and settle down", "(D) spread to other organs"], answer: "C", explanation: "原文：「Once the threat passes, these chemicals subside and the body returns to baseline.」威脅過去後化學物質「subside」並回到基線——所以是「減退、平息」。" },
+      { type: "細節題", question: "According to the passage, which brain region tends to grow LARGER under chronic stress?", options: ["(A) The prefrontal cortex", "(B) The hippocampus", "(C) The amygdala", "(D) All three regions shrink equally"], answer: "C", explanation: "第二段直接說：「The amygdala... actually grows larger and more reactive.」其他兩區是縮小。" },
+      { type: "推論題", question: "It can be inferred from the passage that:", options: ["(A) Chronic stress damage to the brain cannot be reversed once it occurs", "(B) The brain's response to stress can become a self-reinforcing cycle if untreated", "(C) Acute stress is more harmful than chronic stress", "(D) Cortisol and adrenaline have no useful function in the body"], answer: "B", explanation: "第三段：杏仁核過度活躍 + 前額葉變弱 → 把世界看得更危險 + 認知資源更少去管理 → 可推論這是自我強化的循環。**支撐句：第三段「The brain has... been retrained to expect danger」。**" },
+      { type: "預測題", question: "The paragraph following this passage most likely discusses:", options: ["(A) The chemistry of cortisol production", "(B) Specific evidence-based strategies for reducing chronic stress", "(C) How to diagnose chronic stress with brain scans", "(D) The history of psychotherapy"], answer: "B", explanation: "最後一句直接點題：「what specific strategies are most effective at protecting and restoring the stressed brain?」——下一段必然回答「具體有效的策略」。" },
+    ],
+  },
+  {
+    id: "A004",
+    topic: "社群媒體與心理健康",
+    title: "The Comparison Trap of the Endless Feed",
+    source: "The Atlantic",
+    passage: `Social media platforms are designed to maximize engagement, and one of the most reliable ways to capture attention is to invite comparison. Every scroll through a curated feed presents users with carefully selected glimpses of other people's lives — vacations, achievements, relationships, bodies — almost always edited to appear better than ordinary reality. The cumulative psychological effect of this exposure has become a major area of research over the past decade.
+
+Social comparison theory, originally proposed by Leon Festinger in 1954, holds that humans have an innate drive to evaluate themselves by comparing to others. In small communities, this comparison was bounded by who you actually saw in daily life. Social media has removed those bounds entirely. A teenager in a small town now compares herself not to thirty classmates but to thousands of carefully curated influencers, models, and peers presenting only their highlights.
+
+The findings have been consistent and concerning. Studies of adolescents have linked heavy social media use to increased rates of depression, anxiety, body dissatisfaction, and loneliness. The mechanism appears to be upward social comparison — comparing oneself to those who seem better off — which has been shown to lower self-esteem when it occurs frequently and without context.
+
+However, the picture is more nuanced than a simple "social media is harmful" narrative. The same platforms that enable damaging comparisons also support communities, allow marginalized individuals to find peers, and provide platforms for self-expression. Studies suggest that what matters is not screen time alone but how the time is spent. Passive scrolling appears to be the most harmful pattern, while active engagement — messaging friends, joining interest-based groups — shows little or even positive correlation with wellbeing.
+
+This distinction has important implications. Rather than blanket restrictions, more targeted interventions — those that change how people use social media rather than how much — may prove more effective. Parents, educators, and policymakers are beginning to ask not whether to limit social media, but how to reshape its use entirely.`,
+    questions: [
+      { type: "主旨題", question: "What is the main idea of this passage?", options: ["(A) All social media use is harmful to mental health", "(B) Social media's psychological effects depend on how it is used, not just how much", "(C) Festinger's social comparison theory has been disproven", "(D) Marginalized individuals benefit most from social media"], answer: "B", explanation: "全文先呈現比較陷阱，第四段轉折強調「重點不是用多久，而是怎麼用」——這是核心論點。(A) 過於極端；(C) 文章未否定 Festinger；(D) 是細節。" },
+      { type: "詞彙題", question: "The word \"curated\" in paragraph 1 most nearly means:", options: ["(A) randomly selected", "(B) carefully chosen and edited", "(C) medically supervised", "(D) automatically generated"], answer: "B", explanation: "原文「a curated feed presents users with carefully selected glimpses」——下一個詞 carefully selected 直接定義了 curated 的意思。" },
+      { type: "細節題", question: "According to the passage, which pattern of social media use is most strongly linked to negative wellbeing?", options: ["(A) Messaging friends", "(B) Joining interest-based groups", "(C) Passive scrolling through feeds", "(D) Posting one's own content"], answer: "C", explanation: "第四段直接說：「Passive scrolling appears to be the most harmful pattern」。" },
+      { type: "推論題", question: "It can be inferred that the author would most likely support:", options: ["(A) A complete ban on social media for adolescents", "(B) Education about how to use social media more actively rather than passively", "(C) Removing social comparison features entirely from all platforms", "(D) Eliminating all influencer content from social media"], answer: "B", explanation: "最後一段說作者偏好「change how people use social media rather than how much」勝過 blanket restrictions。**支撐句：最後一段「change how people use social media rather than how much」。**" },
+      { type: "預測題", question: "The paragraph following this passage most likely discusses:", options: ["(A) The biography of Leon Festinger", "(B) Specific examples of programs or policies aimed at reshaping social media use", "(C) A detailed history of social media platforms", "(D) The technical algorithms used by social media companies"], answer: "B", explanation: "最後一句說「Parents, educators, and policymakers are beginning to ask... how to reshape its use entirely」——下一段必然延伸具體的重塑方案。" },
+    ],
+  },
+  {
+    id: "A005",
+    topic: "依附理論",
+    title: "How Early Bonds Shape Adult Relationships",
+    source: "Psychology Today",
+    passage: `The relationships we form as adults — with romantic partners, friends, even colleagues — are shaped to a surprising degree by the bonds we formed in the first few years of life. This insight, which originated with British psychiatrist John Bowlby in the mid-twentieth century, has become one of the most influential frameworks in modern developmental psychology.
+
+Bowlby argued that infants are biologically predisposed to seek proximity to a primary caregiver, typically the mother. The quality of this early bond, he proposed, creates an internal working model — a mental template for what relationships are like. Children who experience consistent, responsive caregiving develop a model that says: others are reliable, I am worthy of care, and the world is a reasonably safe place. Children whose caregivers are absent, inconsistent, or rejecting develop different models, with corresponding patterns of expectation and behavior.
+
+Mary Ainsworth, a colleague of Bowlby, designed the famous Strange Situation experiment to classify these patterns. In a brief laboratory procedure, she observed how toddlers responded to being briefly separated from and reunited with their mothers. She identified three primary attachment styles: secure, anxious-ambivalent, and avoidant. A fourth, disorganized, was added by later researchers. Roughly 60 percent of children in low-risk samples showed secure attachment, with the others distributed among the insecure categories.
+
+What makes attachment theory particularly powerful is its predictive reach. Longitudinal studies have followed children classified in infancy into adulthood, finding that early attachment style correlates — though imperfectly — with adult outcomes ranging from romantic relationship quality to workplace functioning. Securely attached children tend to become adults who are comfortable with both intimacy and independence; insecurely attached children show various patterns of difficulty in close relationships.
+
+This is not, however, a deterministic story. Attachment styles can change, and corrective experiences in adolescence and adulthood — through therapy, mentorship, or stable long-term relationships — have been shown to revise internal working models in meaningful ways.`,
+    questions: [
+      { type: "主旨題", question: "What is the main idea of this passage?", options: ["(A) John Bowlby was the most important developmental psychologist", "(B) Early childhood attachment patterns shape adult relationships, but can change with later experience", "(C) Sixty percent of children are securely attached", "(D) The Strange Situation is the most reliable psychological experiment"], answer: "B", explanation: "全文圍繞「早期依附型態如何形塑成年關係」，第五段強調「不是注定的，後來經驗仍可修改」——雙重訊息是文章核心。" },
+      { type: "詞彙題", question: "The phrase \"predictive reach\" in paragraph 4 most nearly means:", options: ["(A) the geographical scope of a study", "(B) the cost of conducting research", "(C) the extent to which something can forecast future outcomes", "(D) the speed of psychological development"], answer: "C", explanation: "後文「Longitudinal studies have followed children... finding that early attachment style correlates with adult outcomes」說明 predictive reach 指的是「能預測未來結果的範圍」。" },
+      { type: "細節題", question: "Who designed the Strange Situation experiment?", options: ["(A) John Bowlby", "(B) Mary Ainsworth", "(C) Both Bowlby and Ainsworth together", "(D) Later researchers in the 1980s"], answer: "B", explanation: "第三段第一句：「Mary Ainsworth, a colleague of Bowlby, designed the famous Strange Situation experiment」。" },
+      { type: "推論題", question: "It can be inferred from the passage that:", options: ["(A) Adults with insecure attachment styles cannot have healthy relationships", "(B) Therapy is unlikely to change attachment patterns", "(C) Early attachment matters, but it is not destiny", "(D) The Strange Situation has been completely replaced by newer methods"], answer: "C", explanation: "第四段說重要、第五段說可改變，相加可推論「重要但不是注定」。**支撐句：第五段「This is not... a deterministic story」。**" },
+      { type: "預測題", question: "The paragraph following this passage most likely discusses:", options: ["(A) Detailed criticism of Bowlby's theory", "(B) The biology of infant brain development", "(C) Specific therapeutic or relational experiences that help revise attachment models", "(D) Statistical methods used in longitudinal studies"], answer: "C", explanation: "最後一句明確預告：「corrective experiences in adolescence and adulthood — through therapy, mentorship, or stable long-term relationships — have been shown to revise internal working models」。" },
+    ],
+  },
+  {
+    id: "A006",
+    topic: "神經可塑性",
+    title: "The Brain That Rewires Itself",
+    source: "Scientific American Mind",
+    passage: `For most of the twentieth century, neuroscientists believed that the adult brain was essentially fixed. Once a person had passed through childhood's critical periods, the wiring was set, and the only direction left was decline. This view has been overturned in the last few decades by mounting evidence of neuroplasticity — the brain's lifelong capacity to reorganize itself in response to experience.
+
+The most dramatic demonstrations come from studies of recovery after injury. When a stroke damages a region of the brain that controls hand movement, surrounding regions can sometimes take over the lost function, particularly when the patient engages in intensive rehabilitation. The brain effectively rewires the route by which a signal travels from intention to muscle. Similarly, in people who lose their sight, the visual cortex does not simply fall silent; it begins processing information from other senses, contributing to the heightened auditory and tactile abilities often observed in blind individuals.
+
+But neuroplasticity is not limited to recovery from damage. It is the basis of all learning. When a violinist practices, the brain regions controlling her left-hand fingers literally expand. When a London taxi driver memorizes the city's streets, his hippocampus grows. Every new skill, every memorized fact, every emotional habit leaves a physical trace in neural tissue.
+
+This capacity, however, is not infinite or unconditional. Plasticity tends to favor what we practice and neglects what we don't. The brain optimizes for our actual habits, not our intended ones. A person who spends hours each day scrolling through social media is, neurologically speaking, training that pattern. A person who practices an instrument or a language is training a different one. In both cases, the brain becomes more efficient at whatever is repeatedly demanded of it.
+
+This insight has profound implications for how we structure our days, our work, and our recovery from setbacks. The next question is how we can deliberately shape this process to our advantage.`,
+    questions: [
+      { type: "主旨題", question: "What is this passage mainly about?", options: ["(A) The decline of the brain in old age", "(B) The brain's lifelong ability to reorganize itself in response to experience", "(C) How strokes damage brain function", "(D) Why violinists have larger brains"], answer: "B", explanation: "全文核心是 neuroplasticity——大腦終身重塑的能力。各段提供不同證據（中風復原、感官替代、學習、習慣）。其他都是細節。" },
+      { type: "詞彙題", question: "The word \"overturned\" in paragraph 1 most nearly means:", options: ["(A) confirmed", "(B) translated", "(C) reversed or rejected", "(D) physically rotated"], answer: "C", explanation: "原文「This view has been overturned... by mounting evidence」——舊觀點被新證據「推翻」。overturned = reversed / rejected。" },
+      { type: "細節題", question: "According to the passage, what happens in the visual cortex of blind individuals?", options: ["(A) It shrinks dramatically and stops working", "(B) It begins processing information from other senses", "(C) It is replaced by new tissue", "(D) It only responds to memories of past sights"], answer: "B", explanation: "第二段：「the visual cortex does not simply fall silent; it begins processing information from other senses」。" },
+      { type: "推論題", question: "It can be inferred from the passage that:", options: ["(A) Habits we form unintentionally also shape our brain structure", "(B) Brain plasticity completely stops in adulthood", "(C) Recovery from stroke is impossible without medication", "(D) Only musicians and taxi drivers experience neuroplasticity"], answer: "A", explanation: "第四段說「The brain optimizes for our actual habits, not our intended ones」——隱含我們無意識的習慣也在塑造大腦。**支撐句：第四段「The brain optimizes for our actual habits, not our intended ones」。**(B)(C)(D) 都與原文相反或無依據。" },
+      { type: "預測題", question: "The paragraph following this passage most likely discusses:", options: ["(A) The history of neuroscience in the 19th century", "(B) Specific practices or strategies for deliberately shaping brain change", "(C) Detailed anatomy of the visual cortex", "(D) Why some animals do not have neuroplasticity"], answer: "B", explanation: "最後一句：「The next question is how we can deliberately shape this process to our advantage.」——下一段必然講具體做法。" },
+    ],
+  },
+  {
+    id: "A007",
+    topic: "情緒調節",
+    title: "The Quiet Power of Reappraisal",
+    source: "APA Monitor",
+    passage: `When something upsetting happens, most of us reach instinctively for the easiest way to feel better: avoid the situation, distract ourselves, or push the feeling down. These strategies often provide short-term relief, but research over the past two decades has identified a different approach that yields more durable benefits — cognitive reappraisal, the practice of reinterpreting an emotional situation to change its meaning.
+
+Reappraisal does not deny what happened. A person stuck in traffic who reappraises is not pretending to be unbothered; instead, they might consciously frame the delay as a chance to listen to a podcast, or as a small inconvenience compared with truly serious problems. The situation is unchanged; what changes is the cognitive interpretation imposed on it. And because emotions arise largely from interpretations, the emotional response shifts accordingly.
+
+The contrast with suppression — pushing emotions down without examining them — is striking. Suppression produces a temporary appearance of calm but tends to backfire over time. Suppressors report higher levels of negative emotion, weaker social relationships, and even elevated cardiovascular activity compared with reappraisers. The act of bottling up feelings is metabolically and psychologically costly.
+
+Reappraisal, by contrast, has been linked to reduced depression and anxiety symptoms, better academic and workplace performance, and stronger interpersonal relationships. Brain imaging studies show that when people reappraise, activity in the prefrontal cortex increases while activity in the amygdala — the threat-detection center — decreases. The strategy literally engages the brain's executive system to dampen its alarm system.
+
+This is not to suggest that reappraisal is always appropriate. Some situations call for direct action; some emotions need to be felt and processed rather than reinterpreted. But for the everyday frustrations and disappointments that fill ordinary life, reappraisal is among the most evidence-supported tools available. The natural follow-up question is how to develop this skill, since it does not come automatically to most people.`,
+    questions: [
+      { type: "主旨題", question: "What is this passage mainly about?", options: ["(A) Why suppressing emotions is sometimes necessary", "(B) Cognitive reappraisal as an effective and well-supported emotion regulation strategy", "(C) The biology of the amygdala", "(D) How to avoid stressful situations entirely"], answer: "B", explanation: "全文核心是「reappraisal 作為有效情緒調節策略」。文章對比 suppression 與 reappraisal、提出證據、最後談發展技能。" },
+      { type: "詞彙題", question: "The word \"durable\" in paragraph 1 most nearly means:", options: ["(A) physical and material", "(B) easy and quick", "(C) long-lasting", "(D) emotional and intense"], answer: "C", explanation: "「short-term relief」對比「durable benefits」——durable = 持久的、long-lasting。" },
+      { type: "細節題", question: "According to brain imaging studies cited in the passage, what happens during reappraisal?", options: ["(A) The amygdala becomes more active and the prefrontal cortex less active", "(B) The prefrontal cortex becomes more active and the amygdala less active", "(C) Both regions shut down simultaneously", "(D) Only the hippocampus is involved"], answer: "B", explanation: "第四段：「activity in the prefrontal cortex increases while activity in the amygdala... decreases」。" },
+      { type: "推論題", question: "It can be inferred from the passage that:", options: ["(A) People who habitually suppress emotions tend to fare worse over time than those who reappraise", "(B) Reappraisal works equally well for all types of emotional situations", "(C) Suppression is the most effective long-term strategy", "(D) Emotions cannot be changed once they arise"], answer: "A", explanation: "第三段對比顯示 suppressors 比 reappraisers 在情緒、人際、生理指標都較差。**支撐句：第三段「Suppressors report higher levels of negative emotion, weaker social relationships, and even elevated cardiovascular activity compared with reappraisers」。**(B) 第五段明說 reappraisal 並非總是合適。" },
+      { type: "預測題", question: "The paragraph following this passage most likely discusses:", options: ["(A) The history of emotion research", "(B) Concrete techniques or training for developing the skill of reappraisal", "(C) Detailed comparisons of antidepressant medications", "(D) Why some people are born more emotional than others"], answer: "B", explanation: "最後一句：「The natural follow-up question is how to develop this skill」——下一段必然談具體訓練方式。" },
+    ],
+  },
+  {
+    id: "A008",
+    topic: "動機",
+    title: "Why Carrots Sometimes Fail",
+    source: "Harvard Business Review",
+    passage: `It seems intuitive that the best way to get someone to do something is to pay them — and pay them more for doing it better. For straightforward, repetitive tasks, this turns out to be largely correct. But for tasks involving creativity, judgment, or genuine engagement, decades of research suggest that the relationship between rewards and performance is much more complicated, and sometimes runs in the opposite direction.
+
+In a now-famous 1973 study, psychologists Mark Lepper and David Greene observed preschoolers who enjoyed drawing freely. The researchers split the children into groups: some were promised a reward for drawing, some received an unexpected reward, and some received nothing. Two weeks later, when given the chance to draw again with no reward in sight, the children who had been promised rewards drew significantly less than the others. The reward had transformed an intrinsically interesting activity into an obligation.
+
+This phenomenon, known as the overjustification effect, has been replicated across many contexts. When extrinsic rewards are introduced for an activity people already find inherently rewarding, intrinsic motivation often declines. The reward sends a subtle message: this must be something not worth doing for its own sake.
+
+Self-determination theory, developed by Edward Deci and Richard Ryan, offers a framework for understanding why. People are most engaged and creative when three basic psychological needs are met: autonomy (a sense of choice), competence (a sense of growing skill), and relatedness (a sense of connection to others). External rewards can undermine autonomy by making the activity feel coerced. They can also reduce competence signals by replacing internal feedback with external judgment.
+
+This does not mean rewards are always counterproductive. For boring tasks that no one would do voluntarily, external incentives may be necessary and effective. But for the kind of work that benefits from creativity, persistence, and genuine engagement, organizations that rely heavily on financial rewards may be unintentionally undermining the very qualities they hope to encourage. A different approach is needed.`,
+    questions: [
+      { type: "主旨題", question: "What is this passage mainly about?", options: ["(A) How to set salary levels in companies", "(B) The complex and sometimes negative effects of extrinsic rewards on intrinsic motivation", "(C) Children's drawing development", "(D) Why preschoolers should not receive rewards"], answer: "B", explanation: "全文圍繞「外在獎勵對內在動機的複雜（有時負面）影響」。" },
+      { type: "詞彙題", question: "The word \"intrinsically\" in paragraph 2 most nearly means:", options: ["(A) for an external reason", "(B) for its own sake", "(C) for a long time", "(D) only secretly"], answer: "B", explanation: "原文「intrinsically interesting activity」與後面「not worth doing for its own sake」對應——intrinsic = 內在的、本身就有價值的。" },
+      { type: "細節題", question: "What did the 1973 Lepper and Greene study find?", options: ["(A) All children drew more after receiving rewards", "(B) Children promised rewards drew less afterward when no reward was offered", "(C) Unexpected rewards always reduced motivation", "(D) The study showed no effect of rewards on motivation"], answer: "B", explanation: "第二段：「the children who had been promised rewards drew significantly less than the others」。" },
+      { type: "推論題", question: "It can be inferred from the passage that:", options: ["(A) Companies using mostly financial incentives may discourage creative work", "(B) Boring tasks should never be rewarded", "(C) Children should be paid for all their schoolwork", "(D) Self-determination theory has been disproven"], answer: "A", explanation: "最後一段說重度依賴金錢獎勵的組織可能反而削弱他們希望鼓勵的特質。**支撐句：最後一段「organizations that rely heavily on financial rewards may be unintentionally undermining the very qualities they hope to encourage」。**" },
+      { type: "預測題", question: "The paragraph following this passage most likely discusses:", options: ["(A) The history of capitalism", "(B) Alternative motivational approaches that support autonomy, competence, and relatedness", "(C) Specific salary recommendations", "(D) Why children should not draw"], answer: "B", explanation: "最後一句：「A different approach is needed.」——下一段必然介紹「不同的方法」，自然會延伸自我決定論的三大基本需求。" },
+    ],
+  },
+  {
+    id: "A009",
+    topic: "認知失調",
+    title: "When Beliefs Collide With Behavior",
+    source: "Psychology Today",
+    passage: `Imagine smoking a cigarette while genuinely believing that smoking causes serious harm. Most people in this situation experience a particular kind of mental discomfort — a tension between what they believe and what they do. In 1957, social psychologist Leon Festinger gave this state a name: cognitive dissonance.
+
+Festinger's central insight was that humans have a strong drive to maintain internal consistency. When our beliefs, attitudes, and behaviors clash, the resulting discomfort pressures us to reduce the inconsistency. The most direct way would be to change the behavior — to stop smoking, in the example above. But this is often the hardest path. Far more commonly, people change their beliefs to fit their behavior, often without realizing they are doing so.
+
+The classic experimental demonstration came from Festinger and Carlsmith's 1959 study. Participants performed a tedious task and were then asked to tell the next participant that the task was actually interesting. Some were paid twenty dollars for the lie; others were paid only one dollar. Surprisingly, those who received less money later reported finding the task more enjoyable. The twenty-dollar group had a clear external justification for lying; the one-dollar group did not, and so they unconsciously revised their attitude to make the lie feel less inconsistent with their self-image.
+
+This pattern shows up everywhere. Voters who chose a candidate suddenly find that candidate's policies more compelling. Consumers who buy an expensive product become convinced it is superior. Members of a group that endured a difficult initiation rate that group more positively. In each case, the mind quietly adjusts beliefs to justify decisions already made.
+
+Recognizing dissonance reduction does not eliminate it, but it can prompt us to ask uncomfortable questions: are my opinions truly evaluated, or have they shifted to defend my past actions? This raises the practical issue of how to think more honestly when our beliefs are already entangled with what we have done.`,
+    questions: [
+      { type: "主旨題", question: "What is this passage mainly about?", options: ["(A) Why smoking is harmful", "(B) The phenomenon of cognitive dissonance and how people reduce it by changing beliefs", "(C) The history of social psychology in the 1950s", "(D) Why people lie for money"], answer: "B", explanation: "全文核心是認知失調及其化解機制（特別是改變信念以符合行為）。" },
+      { type: "詞彙題", question: "The word \"tedious\" in paragraph 3 most nearly means:", options: ["(A) exciting and stimulating", "(B) physically dangerous", "(C) boring and tiresome", "(D) academically advanced"], answer: "C", explanation: "原文後文「tell the next participant that the task was actually interesting」——任務本身需要被「假裝」有趣，所以原本是無聊的。tedious = 冗長乏味的。" },
+      { type: "細節題", question: "In Festinger and Carlsmith's 1959 study, who reported finding the task more enjoyable?", options: ["(A) Those paid $20", "(B) Those paid $1", "(C) Both groups equally", "(D) Neither group"], answer: "B", explanation: "第三段：「those who received less money later reported finding the task more enjoyable」——拿少錢的反而覺得任務有趣。這正是失調化解的證據。" },
+      { type: "推論題", question: "It can be inferred from the passage that:", options: ["(A) People are usually fully aware when they shift their beliefs to justify their actions", "(B) Belief changes that justify past actions often happen unconsciously", "(C) Cognitive dissonance only occurs in laboratory settings", "(D) Festinger's theory has been replaced by newer ones"], answer: "B", explanation: "第二段「often without realizing they are doing so」、第四段「the mind quietly adjusts beliefs」——隱含這個過程通常無意識。**支撐句：第二段「people change their beliefs to fit their behavior, often without realizing they are doing so」。**" },
+      { type: "預測題", question: "The paragraph following this passage most likely discusses:", options: ["(A) Strategies for thinking honestly when one's beliefs may have been shaped by past actions", "(B) The biography of Leon Festinger", "(C) The chemistry of nicotine addiction", "(D) Other unrelated psychological theories"], answer: "A", explanation: "最後一句：「This raises the practical issue of how to think more honestly when our beliefs are already entangled with what we have done.」——下一段必然展開實踐策略。" },
+    ],
+  },
+  {
+    id: "A010",
+    topic: "從眾",
+    title: "The Strange Power of the Group",
+    source: "Scientific American",
+    passage: `In a series of experiments conducted in the 1950s, social psychologist Solomon Asch revealed something unsettling about human judgment. Participants were asked to perform an apparently simple task: look at a reference line and identify which of three other lines matched it in length. Alone, virtually no one made a mistake. But when participants were placed in a group where every other member — actually a confederate of the experimenter — gave the same wrong answer aloud, roughly one-third of participants conformed to the false consensus, contradicting the clear evidence of their own eyes.
+
+Asch's findings shocked the field. The lines were unambiguous; participants were not pressured, threatened, or bribed; the group consisted of strangers, not friends. Yet the simple knowledge that everyone else was saying something different was enough to override perception itself in a substantial minority of cases. Subsequent interviews revealed two different mechanisms. Some participants conformed publicly while privately disagreeing — they knew the group was wrong but did not want to stand out. Others actually came to doubt their own perception, wondering whether they had misunderstood the question.
+
+Conformity is not always pathological. In ambiguous situations, copying others is often a reasonable shortcut: if everyone else is running, perhaps you should run too. Cultural traditions, language, and shared knowledge depend on a baseline tendency to align with one's group. Without it, society would be impossible.
+
+But the same tendency can drive harmful collective behavior. Bystanders fail to help in emergencies because no one else seems concerned. Investors pile into bubbles because the crowd seems to know something. Members of organizations stay silent about clear ethical breaches because no one else is speaking up. In each case, the social cue overrides individual judgment.
+
+What separates productive from destructive conformity is often a single dissenting voice. Asch found that adding even one confederate who disagreed with the majority dramatically reduced conformity in the others. The next question becomes how individuals and institutions can preserve space for that crucial dissent.`,
+    questions: [
+      { type: "主旨題", question: "What is this passage mainly about?", options: ["(A) Why all conformity is harmful", "(B) The power of group influence on individual judgment, and the importance of dissenting voices", "(C) The biography of Solomon Asch", "(D) Why optical illusions fool people"], answer: "B", explanation: "全文核心是「從眾的力量及異議聲音的重要性」。" },
+      { type: "詞彙題", question: "The word \"confederate\" in paragraph 1 most nearly means:", options: ["(A) an enemy", "(B) a research subject", "(C) a person secretly working with the experimenter", "(D) a random stranger"], answer: "C", explanation: "心理學實驗中的 confederate = 實驗助手（假扮一般受試者）。文中說「actually a confederate of the experimenter」明確說明此意。" },
+      { type: "細節題", question: "What did Asch find when one confederate disagreed with the majority?", options: ["(A) Conformity increased", "(B) Conformity dramatically decreased", "(C) Participants left the experiment", "(D) The group became more aggressive"], answer: "B", explanation: "最後一段：「adding even one confederate who disagreed with the majority dramatically reduced conformity」。" },
+      { type: "推論題", question: "It can be inferred from the passage that:", options: ["(A) Conformity is always destructive and should be eliminated", "(B) Some conformity is necessary for society to function", "(C) Asch's participants were unusually weak-willed", "(D) Group decisions are always wiser than individual ones"], answer: "B", explanation: "第三段說「Without it, society would be impossible」——明確指出從眾傾向是社會運作的基礎。**支撐句：第三段「Cultural traditions, language, and shared knowledge depend on a baseline tendency to align with one's group」。**(A) 與第三段相反。" },
+      { type: "預測題", question: "The paragraph following this passage most likely discusses:", options: ["(A) The history of optical research", "(B) How individuals and institutions can protect space for dissenting voices", "(C) Detailed statistics from the Asch experiments", "(D) Why some animals also conform"], answer: "B", explanation: "最後一句：「how individuals and institutions can preserve space for that crucial dissent.」——下一段必然延伸這個主題。" },
+    ],
+  },
+  {
+    id: "A011",
+    topic: "記憶",
+    title: "The Memories That Were Never There",
+    source: "The Atlantic",
+    passage: `Most of us treat memory as a kind of recording — imperfect, perhaps, but fundamentally a retrieval of something that actually happened. Decades of psychological research have shown this view to be deeply mistaken. Memory is not a recording but a reconstruction, and one that is remarkably easy to manipulate.
+
+The most striking demonstrations come from the work of Elizabeth Loftus, whose experiments have shaped both academic psychology and the legal system. In one classic study, participants who watched a video of a car accident were later asked to estimate the speed of the vehicles. Some were asked how fast the cars were going when they "hit" each other; others when they "smashed" into each other. The single word made a substantial difference in their estimates — and, more remarkably, in what they later remembered seeing. The "smashed" group was significantly more likely to recall having seen broken glass, even though no broken glass appeared in the video.
+
+Loftus extended this work in studies that successfully implanted entire false memories — for events that never happened at all. Through repeated suggestion from a trusted source, roughly a quarter of adult participants came to believe in detail that they had been lost in a shopping mall as a child, an event their families confirmed had never occurred. Once the false memory took root, participants often elaborated on it, adding details and emotions that gave their fabricated experience the same texture as their genuine memories.
+
+The implications are unsettling. Eyewitness testimony, long treated by courts as a gold standard of evidence, has been shown to be highly malleable to suggestion. Therapeutic techniques that aimed to "recover" buried memories of childhood trauma may, in some cases, have created memories that never were. Even our personal narratives — the stories we tell about who we are — are partly constructions that shift each time we revisit them.
+
+This raises a difficult question: if memory is this fluid, how should we treat it in legal, therapeutic, and personal contexts?`,
+    questions: [
+      { type: "主旨題", question: "What is this passage mainly about?", options: ["(A) The reliability of eyewitness testimony in courts", "(B) Memory as a reconstructive process that is vulnerable to suggestion", "(C) The biography of Elizabeth Loftus", "(D) How to remember car accidents better"], answer: "B", explanation: "全文核心是「記憶不是錄音、是重建、容易受暗示影響」。" },
+      { type: "詞彙題", question: "The word \"malleable\" in paragraph 4 most nearly means:", options: ["(A) reliable and unchanging", "(B) easily shaped or influenced", "(C) financially valuable", "(D) physically heavy"], answer: "B", explanation: "原文「highly malleable to suggestion」與全文主題（記憶易受暗示）一致。malleable = 易塑形的、可塑的。" },
+      { type: "細節題", question: "In Loftus's car accident study, what difference did the word \"smashed\" make?", options: ["(A) Participants estimated lower speeds", "(B) Participants were more likely to recall seeing broken glass that wasn't actually there", "(C) Participants forgot the accident entirely", "(D) Participants became more accurate in their estimates"], answer: "B", explanation: "第二段：「The 'smashed' group was significantly more likely to recall having seen broken glass, even though no broken glass appeared in the video.」" },
+      { type: "推論題", question: "It can be inferred from the passage that:", options: ["(A) Memory tends to remain perfectly stable across time", "(B) Therapeutic techniques designed to recover memories should be used with caution", "(C) Courts always accept eyewitness testimony as decisive", "(D) Only children can be implanted with false memories"], answer: "B", explanation: "第四段提到「Therapeutic techniques that aimed to 'recover' buried memories... may, in some cases, have created memories that never were.」——明顯暗示應謹慎使用。**支撐句：第四段「may, in some cases, have created memories that never were」。**" },
+      { type: "預測題", question: "The paragraph following this passage most likely discusses:", options: ["(A) The history of car accident research", "(B) How memory's reconstructive nature should change practices in courts, therapy, or personal life", "(C) The biological structures of the hippocampus", "(D) Why some people have photographic memory"], answer: "B", explanation: "最後一句：「how should we treat it in legal, therapeutic, and personal contexts?」——直接拋出三個應用場域，下一段必然延伸這些。" },
+    ],
+  },
+  {
+    id: "A012",
+    topic: "正念與冥想",
+    title: "Inside the Meditating Brain",
+    source: "Scientific American Mind",
+    passage: `The image of a meditator sitting motionless suggests an emptying of the mind, a stilling of activity. Brain imaging tells a different story. The meditating brain is not less active but differently active, and the patterns that emerge with consistent practice can be remarkably stable.
+
+The most consistent finding across studies is the increased engagement of regions associated with attention and self-regulation, particularly the prefrontal cortex and the anterior cingulate cortex. These areas help direct focus, monitor for distraction, and gently return attention when the mind wanders. Long-term meditators show stronger and more efficient activation of these regions, and the changes appear in even relatively brief training programs of eight to twelve weeks.
+
+Equally striking are changes in regions linked to self-referential thinking. The default mode network — a system active when we are not focused on the external world but instead lost in thought, planning, or rumination — shows reduced activity during meditation and, in long-term practitioners, lower baseline activity overall. This may help explain why experienced meditators often report feeling less caught up in repetitive negative thoughts.
+
+The amygdala, the brain's threat-detection center, also responds. After mindfulness training, participants typically show reduced amygdala reactivity to emotional stimuli. The structure does not stop responding to threats, but its responses become more proportionate and recover more quickly. The brain becomes, in a sense, less easily hijacked.
+
+These findings have given rise to evidence-based interventions. Mindfulness-Based Stress Reduction, originally developed by Jon Kabat-Zinn for chronic pain patients, is now used in hundreds of hospitals. Mindfulness-Based Cognitive Therapy has been shown to reduce relapse rates in recurrent depression by amounts comparable to maintenance medication. The science is clear enough that many medical institutions have moved meditation from the category of complementary practice into mainstream treatment.
+
+Still, important questions remain about how these effects scale across different populations and conditions, and about which forms of practice produce which specific benefits.`,
+    questions: [
+      { type: "主旨題", question: "What is this passage mainly about?", options: ["(A) How to sit still while meditating", "(B) The measurable effects of meditation on brain function and its clinical applications", "(C) The biography of Jon Kabat-Zinn", "(D) Why meditation is a religious practice"], answer: "B", explanation: "全文核心是「冥想對大腦的可測效應與臨床應用」。" },
+      { type: "詞彙題", question: "The word \"hijacked\" in paragraph 4 most nearly means:", options: ["(A) flown to a destination", "(B) taken over and controlled", "(C) made permanently silent", "(D) physically broken"], answer: "B", explanation: "原文「The brain becomes... less easily hijacked」——比喻大腦較不容易被劫持/控制（被情緒）。" },
+      { type: "細節題", question: "What does the passage say about the amygdala after mindfulness training?", options: ["(A) It stops responding to threats entirely", "(B) Its reactivity to emotional stimuli is reduced and recovery is faster", "(C) It grows larger and more reactive", "(D) It is replaced by other brain regions"], answer: "B", explanation: "第四段：「reduced amygdala reactivity to emotional stimuli... its responses become more proportionate and recover more quickly」。" },
+      { type: "推論題", question: "It can be inferred from the passage that:", options: ["(A) Long-term meditators may experience less rumination than non-meditators", "(B) Meditation has no evidence-based clinical use", "(C) The default mode network is unrelated to negative thinking", "(D) Mindfulness training requires years of practice to show any effect"], answer: "A", explanation: "第三段說 default mode network（與沉思反芻有關）在長期冥想者基線活動較低，並隱含這解釋了他們較少陷入反覆負面思考。**支撐句：第三段「experienced meditators often report feeling less caught up in repetitive negative thoughts」。**(D) 第二段明說八到十二週就能看到變化。" },
+      { type: "預測題", question: "The paragraph following this passage most likely discusses:", options: ["(A) The history of religion", "(B) Detailed criticism of all meditation research", "(C) Open research questions about which populations and which practices benefit most", "(D) How to build a meditation cushion"], answer: "C", explanation: "最後一句：「important questions remain about how these effects scale across different populations and conditions, and about which forms of practice produce which specific benefits.」——下一段必然展開這些待解問題。" },
+    ],
+  },
+];
+
+// ─── Daily batch logic ────────────────────────────────────────────────────
+
+function seededShuffle(array, seed) {
+  // Mulberry32 PRNG
+  let s = seed >>> 0;
+  const next = () => {
+    s = (s + 0x6D2B79F5) >>> 0;
+    let t = s;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  const arr = [...array];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(next() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function getDateSeed(d = new Date()) {
+  return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+}
+
+function getTodaysBatch(articles, count = 5) {
+  const seed = getDateSeed();
+  return seededShuffle(articles, seed).slice(0, count);
+}
+
+function todayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+// ─── Constants ─────────────────────────────────────────────────────────────
+
+const DANGER_TYPES = ["主旨題", "推論題", "預測題"];
+const DANGER_TIPS = {
+  "主旨題": "先自己用一句話說主旨，再看選項。只出現一次的是細節，貫穿全篇的才是主旨。",
+  "推論題": "選之前要能在原文找到一句支撐句。找不到原文根據就不能選。",
+  "預測題": "只看最後一句。作者在最後一句通常會預告下一段的方向。",
+};
+
+const COMPLETED_KEY = "reading_completed_v2"; // { "YYYY-MM-DD": ["A001", ...] }
+
+// ─── Color tokens (light theme) ───────────────────────────────────────────
+
+const C = {
+  bg: "#faf8f3",
+  cardBg: "#ffffff",
+  border: "#e8e2d4",
+  borderStrong: "#d4ccb8",
+  textPrimary: "#1a1a1a",
+  textBody: "#2a2a2a",
+  textSecondary: "#5a5a5a",
+  textMuted: "#8a8a8a",
+  accent: "#3a4a8c",
+  accentBg: "#eef0fa",
+  accentBorder: "#c8cfee",
+  danger: "#a13a3a",
+  dangerBg: "#fcf3f1",
+  dangerBorder: "#e8c5be",
+  success: "#2a6b3a",
+  successBg: "#f1faf2",
+  successBorder: "#c8e0cd",
+  errorBg: "#fcf2f0",
+  errorBorder: "#eccac2",
+  errorText: "#9c2a2a",
+};
+
+// ─── Component ─────────────────────────────────────────────────────────────
+
+function App() {
+  const [phase, setPhase] = useState("select");
+  const [currentArticle, setCurrentArticle] = useState(null);
+  const [answers, setAnswers] = useState(Array(5).fill(null));
+  const [completedToday, setCompletedToday] = useState([]);
+  const [completedAllTime, setCompletedAllTime] = useState({});
+
+  const todaysBatch = useMemo(() => getTodaysBatch(ARTICLES, 5), []);
+  const tKey = todayKey();
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await storage.get(COMPLETED_KEY);
+        if (r && r.value) {
+          const data = JSON.parse(r.value);
+          setCompletedAllTime(data);
+          setCompletedToday(data[tKey] || []);
+        }
+      } catch (e) {
+        // first time, no record
+      }
+    })();
+  }, [tKey]);
+
+  const persistCompletion = async (articleId) => {
+    const updated = {
+      ...completedAllTime,
+      [tKey]: [...new Set([...(completedAllTime[tKey] || []), articleId])],
+    };
+    setCompletedAllTime(updated);
+    setCompletedToday(updated[tKey]);
+    try {
+      await storage.set(COMPLETED_KEY, JSON.stringify(updated));
+    } catch (e) {}
+  };
+
+  const answered = answers.filter((a) => a !== null).length;
+  const score = useMemo(() => {
+    if (!currentArticle) return 0;
+    return currentArticle.questions.reduce(
+      (acc, q, i) => acc + (answers[i] === q.answer ? 1 : 0),
+      0
+    );
+  }, [answers, currentArticle]);
+
+  const startArticle = (article) => {
+    setCurrentArticle(article);
+    setAnswers(Array(5).fill(null));
+    setPhase("quiz");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const pick = (qIdx, letter) => {
+    if (phase === "result") return;
+    setAnswers((prev) => {
+      const next = [...prev];
+      next[qIdx] = letter;
+      return next;
+    });
+  };
+
+  const submit = () => {
+    if (answered < 5) return;
+    setPhase("result");
+    if (currentArticle) persistCompletion(currentArticle.id);
+  };
+
+  const reset = () => {
+    setPhase("select");
+    setCurrentArticle(null);
+    setAnswers(Array(5).fill(null));
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const nextInBatch = () => {
+    const remaining = todaysBatch.filter(
+      (a) => !completedToday.includes(a.id) && a.id !== currentArticle?.id
+    );
+    if (remaining.length > 0) {
+      startArticle(remaining[0]);
+    } else {
+      reset();
+    }
+  };
+
+  // ─── Styles ──────────────────────────────────────────────────────────────
+
+  const S = {
+    root: {
+      minHeight: "100vh",
+      background: C.bg,
+      color: C.textBody,
+      fontFamily: "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+      padding: "20px 14px 60px",
+    },
+    wrap: { maxWidth: 720, margin: "0 auto" },
+    topBar: {
+      display: "flex",
+      alignItems: "baseline",
+      gap: 10,
+      flexWrap: "wrap",
+      marginBottom: 18,
+      paddingBottom: 16,
+      borderBottom: `1px solid ${C.border}`,
+    },
+    logo: {
+      fontSize: 14,
+      fontWeight: 700,
+      letterSpacing: "0.12em",
+      color: C.accent,
+      textTransform: "uppercase",
+    },
+    logoSub: { fontSize: 12, color: C.textMuted, letterSpacing: "0.03em" },
+    todayHeader: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "baseline",
+      marginBottom: 14,
+      flexWrap: "wrap",
+      gap: 8,
+    },
+    todayTitle: { fontSize: 18, fontWeight: 700, color: C.textPrimary },
+    todayProgress: {
+      fontSize: 12,
+      color: C.textSecondary,
+      letterSpacing: "0.03em",
+    },
+    card: {
+      background: C.cardBg,
+      border: `1px solid ${C.border}`,
+      borderRadius: 12,
+      padding: "18px",
+      marginBottom: 16,
+    },
+    sectionTitle: {
+      fontSize: 11,
+      fontWeight: 700,
+      letterSpacing: "0.18em",
+      color: C.textMuted,
+      textTransform: "uppercase",
+      marginBottom: 12,
+      marginTop: 8,
+    },
+    listItem: (done, isToday) => ({
+      padding: "14px 16px",
+      background: isToday ? C.accentBg : C.cardBg,
+      border: `1px solid ${isToday ? C.accentBorder : C.border}`,
+      borderRadius: 10,
+      marginBottom: 8,
+      cursor: "pointer",
+      transition: "all 0.12s",
+      opacity: done ? 0.55 : 1,
+      minHeight: 44,
+    }),
+    listTopic: {
+      fontSize: 10,
+      color: C.accent,
+      letterSpacing: "0.1em",
+      marginBottom: 4,
+      fontWeight: 700,
+      textTransform: "uppercase",
+    },
+    listTitle: {
+      fontSize: 14,
+      color: C.textPrimary,
+      lineHeight: 1.4,
+      fontWeight: 500,
+    },
+    listMeta: {
+      fontSize: 11,
+      color: C.textMuted,
+      marginTop: 4,
+    },
+    completeBanner: {
+      padding: "16px 18px",
+      background: C.successBg,
+      border: `1px solid ${C.successBorder}`,
+      borderRadius: 10,
+      marginBottom: 16,
+      color: C.success,
+      fontSize: 13,
+      fontWeight: 600,
+      lineHeight: 1.6,
+    },
+    articleMeta: {
+      fontSize: 11,
+      color: C.textMuted,
+      letterSpacing: "0.06em",
+      marginBottom: 8,
+      textTransform: "uppercase",
+    },
+    articleTitle: {
+      fontSize: 22,
+      fontWeight: 700,
+      color: C.textPrimary,
+      marginBottom: 18,
+      lineHeight: 1.3,
+      fontFamily: "Georgia, 'Times New Roman', serif",
+    },
+    passage: {
+      fontSize: 16,
+      lineHeight: 1.85,
+      color: C.textBody,
+      whiteSpace: "pre-wrap",
+      fontFamily: "Georgia, 'Times New Roman', serif",
+    },
+    qNum: {
+      fontSize: 11,
+      color: C.textMuted,
+      marginBottom: 6,
+      letterSpacing: "0.05em",
+    },
+    qText: {
+      fontSize: 15,
+      lineHeight: 1.65,
+      marginBottom: 14,
+      color: C.textPrimary,
+      fontWeight: 500,
+    },
+    explanation: {
+      marginTop: 14,
+      padding: "12px 14px",
+      background: C.bg,
+      borderRadius: 8,
+      borderLeft: `3px solid ${C.accent}`,
+      fontSize: 13,
+      lineHeight: 1.75,
+      color: C.textBody,
+    },
+    tipBox: {
+      marginTop: 10,
+      padding: "10px 14px",
+      background: C.accentBg,
+      borderRadius: 8,
+      borderLeft: `3px solid ${C.accent}`,
+      fontSize: 12,
+      color: C.accent,
+      lineHeight: 1.65,
+      fontWeight: 500,
+    },
+    scoreBox: {
+      textAlign: "center",
+      padding: "26px 22px",
+      background: C.cardBg,
+      border: `1px solid ${C.border}`,
+      borderRadius: 12,
+      marginBottom: 18,
+    },
+    scoreBig: {
+      fontSize: 48,
+      fontWeight: 700,
+      color: C.accent,
+      lineHeight: 1,
+      fontFamily: "Georgia, serif",
+    },
+    scoreSub: { fontSize: 13, color: C.textSecondary, marginTop: 8 },
+    progressBar: {
+      width: "100%",
+      height: 4,
+      background: C.border,
+      borderRadius: 2,
+      marginBottom: 20,
+      overflow: "hidden",
+    },
+  };
+
+  const primaryBtn = (disabled) => ({
+    width: "100%",
+    padding: "14px",
+    borderRadius: 10,
+    border: "none",
+    background: disabled ? C.border : C.accent,
+    color: disabled ? C.textMuted : "#fff",
+    cursor: disabled ? "not-allowed" : "pointer",
+    fontSize: 14,
+    fontWeight: 700,
+    fontFamily: "inherit",
+    letterSpacing: "0.03em",
+    minHeight: 48,
+    transition: "all 0.12s",
+  });
+
+  const secondaryBtn = {
+    width: "100%",
+    padding: "13px",
+    borderRadius: 10,
+    border: `1px solid ${C.accent}`,
+    background: "transparent",
+    color: C.accent,
+    cursor: "pointer",
+    fontSize: 14,
+    fontWeight: 700,
+    fontFamily: "inherit",
+    letterSpacing: "0.03em",
+    minHeight: 48,
+    marginTop: 8,
+  };
+
+  const qWrapStyle = (status) => ({
+    background:
+      status === "correct" ? C.successBg : status === "wrong" ? C.errorBg : C.cardBg,
+    border: `1px solid ${
+      status === "correct" ? C.successBorder : status === "wrong" ? C.errorBorder : C.border
+    }`,
+    borderRadius: 12,
+    padding: "18px",
+    marginBottom: 14,
+  });
+
+  const typeTagStyle = (danger) => ({
+    display: "inline-block",
+    padding: "3px 9px",
+    borderRadius: 5,
+    fontSize: 10,
+    fontWeight: 700,
+    letterSpacing: "0.1em",
+    background: danger ? C.dangerBg : C.accentBg,
+    color: danger ? C.danger : C.accent,
+    marginBottom: 12,
+    border: `1px solid ${danger ? C.dangerBorder : C.accentBorder}`,
+    textTransform: "uppercase",
+  });
+
+  const optStyle = (sel, showRes, isAns) => {
+    let bg = C.cardBg, border = C.border, color = C.textBody;
+    if (showRes && isAns) {
+      bg = C.successBg; border = C.successBorder; color = C.success;
+    } else if (showRes && sel && !isAns) {
+      bg = C.errorBg; border = C.errorBorder; color = C.errorText;
+    } else if (sel) {
+      bg = C.accentBg; border = C.accentBorder; color = C.accent;
+    }
+    return {
+      display: "block",
+      width: "100%",
+      padding: "12px 14px",
+      marginBottom: 8,
+      borderRadius: 9,
+      border: `1px solid ${border}`,
+      background: bg,
+      color,
+      cursor: showRes ? "default" : "pointer",
+      textAlign: "left",
+      fontSize: 14,
+      fontFamily: "inherit",
+      lineHeight: 1.5,
+      transition: "all 0.1s",
+      minHeight: 44,
+      fontWeight: sel || (showRes && isAns) ? 600 : 400,
+    };
+  };
+
+  // ─── Render ──────────────────────────────────────────────────────────────
+
+  const allTodayDone = todaysBatch.every((a) => completedToday.includes(a.id));
+  const otherArticles = ARTICLES.filter(
+    (a) => !todaysBatch.some((t) => t.id === a.id)
+  );
+
+  return (
+    <div style={S.root}>
+      <div style={S.wrap}>
+        <div style={S.topBar}>
+          <span style={S.logo}>ReadLab</span>
+          <span style={S.logoSub}>· 心理學英文閱讀練習</span>
+        </div>
+
+        {phase === "select" && (
+          <>
+            <div style={S.todayHeader}>
+              <div style={S.todayTitle}>📅 今日 5 篇</div>
+              <div style={S.todayProgress}>
+                {completedToday.filter(id => todaysBatch.some(a => a.id === id)).length} / 5
+              </div>
+            </div>
+
+            {allTodayDone && (
+              <div style={S.completeBanner}>
+                ✓ 今日 5 篇都完成了！明天會自動換新的，也可以練下面的其他文章
+              </div>
+            )}
+
+            <div style={S.card}>
+              {todaysBatch.map((a) => {
+                const done = completedToday.includes(a.id);
+                return (
+                  <div
+                    key={a.id}
+                    style={S.listItem(done, true)}
+                    onClick={() => startArticle(a)}
+                  >
+                    <div style={S.listTopic}>{a.topic}</div>
+                    <div style={S.listTitle}>{a.title}</div>
+                    {done && <div style={S.listMeta}>✓ 已完成</div>}
+                  </div>
+                );
+              })}
+            </div>
+
+            {otherArticles.length > 0 && (
+              <>
+                <div style={S.sectionTitle}>其他文章 ({otherArticles.length})</div>
+                <div style={S.card}>
+                  {otherArticles.map((a) => {
+                    const done = completedToday.includes(a.id);
+                    return (
+                      <div
+                        key={a.id}
+                        style={S.listItem(done, false)}
+                        onClick={() => startArticle(a)}
+                      >
+                        <div style={S.listTopic}>{a.topic}</div>
+                        <div style={S.listTitle}>{a.title}</div>
+                        {done && <div style={S.listMeta}>✓ 已完成</div>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
+            <div
+              style={{
+                fontSize: 12,
+                color: C.textMuted,
+                marginTop: 16,
+                lineHeight: 1.7,
+                textAlign: "center",
+              }}
+            >
+              每篇 5 題：主旨題 / 詞彙題 / 細節題 / 推論題 / 預測題
+            </div>
+          </>
+        )}
+
+        {(phase === "quiz" || phase === "result") && currentArticle && (
+          <>
+            {phase === "quiz" && (
+              <div style={S.progressBar}>
+                <div
+                  style={{
+                    width: `${(answered / 5) * 100}%`,
+                    height: "100%",
+                    background: C.accent,
+                    transition: "width 0.3s",
+                  }}
+                />
+              </div>
+            )}
+
+            <div style={S.card}>
+              <div style={S.articleMeta}>
+                {currentArticle.source} · {currentArticle.topic}
+              </div>
+              <div style={S.articleTitle}>{currentArticle.title}</div>
+              <div style={S.passage}>{currentArticle.passage}</div>
+            </div>
+
+            {phase === "result" && (
+              <div style={S.scoreBox}>
+                <div style={S.scoreBig}>{score} / 5</div>
+                <div style={S.scoreSub}>
+                  {score === 5 ? "完美！全部答對" : score >= 4 ? "很好，只差一步" : score >= 3 ? "還不錯，繼續練" : "多練幾篇就會進步"}
+                </div>
+              </div>
+            )}
+
+            {currentArticle.questions.map((q, i) => {
+              const sel = answers[i];
+              const showRes = phase === "result";
+              const correct = sel === q.answer;
+              const isDanger = DANGER_TYPES.includes(q.type);
+              const status = showRes ? (correct ? "correct" : "wrong") : "neutral";
+
+              return (
+                <div key={i} style={qWrapStyle(status)}>
+                  <span style={typeTagStyle(isDanger)}>
+                    {isDanger ? "⚠ " : ""}{q.type}
+                  </span>
+                  <div style={S.qNum}>Q{i + 1}</div>
+                  <div style={S.qText}>{q.question}</div>
+
+                  {q.options.map((opt, j) => {
+                    const letter = ["A", "B", "C", "D"][j];
+                    return (
+                      <button
+                        key={j}
+                        onClick={() => pick(i, letter)}
+                        style={optStyle(sel === letter, showRes, q.answer === letter)}
+                      >
+                        {opt}
+                      </button>
+                    );
+                  })}
+
+                  {showRes && (
+                    <div style={S.explanation}>
+                      <span style={{ color: C.accent, fontWeight: 700 }}>解析 </span>
+                      {q.explanation}
+                    </div>
+                  )}
+
+                  {showRes && isDanger && !correct && (
+                    <div style={S.tipBox}>💡 {DANGER_TIPS[q.type]}</div>
+                  )}
+                </div>
+              );
+            })}
+
+            {phase === "quiz" && (
+              <button
+                style={primaryBtn(answered < 5)}
+                disabled={answered < 5}
+                onClick={submit}
+              >
+                {answered < 5 ? `還有 ${5 - answered} 題未作答` : "交卷 →"}
+              </button>
+            )}
+
+            {phase === "result" && (
+              <>
+                {todaysBatch.some(a => a.id === currentArticle.id) &&
+                 todaysBatch.some(a => !completedToday.includes(a.id) && a.id !== currentArticle.id) && (
+                  <button style={primaryBtn(false)} onClick={nextInBatch}>
+                    今日下一篇 →
+                  </button>
+                )}
+                <button style={secondaryBtn} onClick={reset}>
+                  ← 回到文章列表
+                </button>
+              </>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+  </script>
+</body>
+</html>
